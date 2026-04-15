@@ -1,4 +1,4 @@
-﻿using FramePFX.Themes;
+using FramePFX.Themes;
 using Ookii.Dialogs.Wpf;
 using Peter;
 using System;
@@ -165,8 +165,8 @@ namespace rg_gui
             var ripgrepPath = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath) ?? string.Empty, "rg.exe");
             if (!File.Exists(ripgrepPath))
             {
-                MessageBox.Show("rg.exe not found in installation path.", "Error");
-                throw new Exception("rg.exe not found in installation path.");
+                MessageBox.Show("安裝路徑中找不到 rg.exe。", "錯誤");
+                throw new Exception("安裝路徑中找不到 rg.exe。");
             }
 
             m_maxSearchTerms = int.TryParse(config.AppSettings.Settings["MaxSearchTerms"]?.Value, out var maxSearchTerms) ? maxSearchTerms : DEFAULT_MAXSEARCHTERMS;
@@ -245,7 +245,7 @@ namespace rg_gui
                 if (!FileResultItems.Any(x => x.Path == result.path && x.Filename == result.filename))
                 {
                     FileResultItems.Add(new FileSearchResult(result.path, result.filename));
-                    txtFileListStatus.Text = $"Found {FileResultItems.Count} files.";
+                    txtFileListStatus.Text = $"已找到 {FileResultItems.Count} 個檔案。";
                 }
             });
         }
@@ -292,7 +292,7 @@ namespace rg_gui
                         ResultLineItems.Add(new ResultLine(lineResult.Key.lineNumber, GetColorizedString(lineResult.Value.LineContent, lineResult.Value.TermResults).Trim()));
                     }
 
-                    txtResultLineStatus.Text = $"{ResultLineItems.Count} lines matched.";
+                    txtResultLineStatus.Text = $"符合 {ResultLineItems.Count} 行。";
                 }
             }
         }
@@ -329,7 +329,7 @@ namespace rg_gui
         {
             if ((txtBasePath.Text.IndexOfAny(Path.GetInvalidPathChars()) != -1) || !Directory.Exists(txtBasePath.Text))
             {
-                MessageBox.Show("Invalid \"In Folder\" path.", "Error");
+                MessageBox.Show("無效的「搜尋資料夾」路徑。", "錯誤");
                 return;
             }
 
@@ -355,7 +355,7 @@ namespace rg_gui
 
             if (searchTerms.Count > m_maxSearchTerms)
             {
-                MessageBox.Show($"Search text contains more than {m_maxSearchTerms} terms.");
+                MessageBox.Show($"搜尋內容包含超過 {m_maxSearchTerms} 個詞。");
                 return;
             }
 
@@ -409,7 +409,7 @@ namespace rg_gui
             }
 
             stopwatch.Stop();
-            txtFileListStatus.Text = $"Found {FileResultItems.Count} files.  Took {stopwatch.Elapsed.TotalSeconds:0.00} seconds.";
+            txtFileListStatus.Text = $"已找到 {FileResultItems.Count} 個檔案。耗時 {stopwatch.Elapsed.TotalSeconds:0.00} 秒。";
         }
 
         private void btnBrowse_Click(object sender, RoutedEventArgs e)

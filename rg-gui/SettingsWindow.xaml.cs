@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 
@@ -9,7 +9,7 @@ namespace rg_gui
     /// </summary>
     public partial class SettingsWindow : Window
     {
-        public string Theme { get; set; }
+        public string Theme { get; set; } = string.Empty;
         public int MaxSearchTerms { get; set; }
         public bool Multicolor { get; set; }
 
@@ -23,7 +23,7 @@ namespace rg_gui
         {
             if (MaxSearchTerms < 1)
             {
-                MessageBox.Show("Maximum search terms must be at least 1.");
+                MessageBox.Show("最大搜尋詞數至少為 1。");
                 return;
             }
 
