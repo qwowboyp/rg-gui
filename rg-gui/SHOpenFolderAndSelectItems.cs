@@ -143,7 +143,7 @@ namespace SHOpenFolderAndSelectItems
             public static void SHOpenFolderAndSelectItems(IntPtr pidlFolder, IntPtr[] apidl, int dwFlags)
             {
                 var cidl = (apidl != null) ? (uint)apidl.Length : 0U;
-                var result = SHOpenFolderAndSelectItems_(pidlFolder, cidl, apidl, dwFlags);
+                var result = SHOpenFolderAndSelectItems_(pidlFolder, cidl, apidl!, dwFlags);
                 Marshal.ThrowExceptionForHR(result);
             }
 
@@ -156,7 +156,7 @@ namespace SHOpenFolderAndSelectItems
             uint pchEaten;
             uint pdwAttributes = 0;
             IntPtr ppidl;
-            parentFolder.ParseDisplayName(IntPtr.Zero, null, displayName, out pchEaten, out ppidl, ref pdwAttributes);
+                parentFolder.ParseDisplayName(IntPtr.Zero, null!, displayName, out pchEaten, out ppidl, ref pdwAttributes);
 
             return ppidl;
         }
@@ -172,7 +172,7 @@ namespace SHOpenFolderAndSelectItems
         static IShellFolder PIDLToShellFolder(IShellFolder parent, IntPtr pidl)
         {
             IShellFolder folder;
-            var result = parent.BindToObject(pidl, null, ref IID_IShellFolder, out folder);
+            var result = parent.BindToObject(pidl, null!, ref IID_IShellFolder, out folder);
             Marshal.ThrowExceptionForHR((int)result);
             return folder;
         }
@@ -194,7 +194,7 @@ namespace SHOpenFolderAndSelectItems
             var pidl = PathToAbsolutePIDL(path);
             try
             {
-                SHOpenFolderAndSelectItems(pidl, null, edit);
+                SHOpenFolderAndSelectItems(pidl, null!, edit);
             }
             finally
             {
@@ -283,7 +283,7 @@ namespace SHOpenFolderAndSelectItems
 
             foreach (var explorerWindowPaths in explorerWindows)
             {
-                var parentDirectory = Path.GetDirectoryName(explorerWindowPaths.First().FullName);
+                var parentDirectory = Path.GetDirectoryName(explorerWindowPaths.First().FullName)!;
                 FilesOrFolders(parentDirectory, explorerWindowPaths.Select(fsi => fsi.Name).ToList());
             }
         }

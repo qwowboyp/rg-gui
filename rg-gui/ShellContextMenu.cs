@@ -81,7 +81,7 @@ namespace Peter
             else
             {
                 ctxMenuPtr = IntPtr.Zero;
-                _oContextMenu = null;
+                _oContextMenu = null!;
                 return false;
             }
         }
@@ -183,37 +183,37 @@ namespace Peter
             if (null != _oContextMenu)
             {
                 Marshal.ReleaseComObject(_oContextMenu);
-                _oContextMenu = null;
+                _oContextMenu = null!;
             }
             if (null != _oContextMenu2)
             {
                 Marshal.ReleaseComObject(_oContextMenu2);
-                _oContextMenu2 = null;
+                _oContextMenu2 = null!;
             }
             if (null != _oContextMenu3)
             {
                 Marshal.ReleaseComObject(_oContextMenu3);
-                _oContextMenu3 = null;
+                _oContextMenu3 = null!;
             }
             if (null != _oDesktopFolder)
             {
                 Marshal.ReleaseComObject(_oDesktopFolder);
-                _oDesktopFolder = null;
+                _oDesktopFolder = null!;
             }
             if (null != _oParentFolder)
             {
                 Marshal.ReleaseComObject(_oParentFolder);
-                _oParentFolder = null;
+                _oParentFolder = null!;
             }
             if (null != _arrPIDLs)
             {
                 FreePIDLs(_arrPIDLs);
-                _arrPIDLs = null;
+                _arrPIDLs = null!;
             }
 
             if (null != _arrFI)
             {
-                _arrFI = null;
+                _arrFI = null!;
             }
         }
         #endregion
@@ -248,7 +248,7 @@ namespace Peter
         /// </summary>
         /// <param name="folderName">Folder path</param>
         /// <returns>IShellFolder for the folder (relative from the desktop)</returns>
-        private IShellFolder GetParentFolder(string folderName)
+        private IShellFolder? GetParentFolder(string folderName)
         {
             if (null == _oParentFolder)
             {
@@ -299,14 +299,14 @@ namespace Peter
         /// </summary>
         /// <param name="arrFI">Array of FileInfo</param>
         /// <returns>Array of PIDLs</returns>
-        protected IntPtr[] GetPIDLs(IEnumerable<FileInfo> arrFI)
+        protected IntPtr[]? GetPIDLs(IEnumerable<FileInfo> arrFI)
         {
             if (null == arrFI || !arrFI.Any())
             {
                 return null;
             }
 
-            IShellFolder oParentFolder = GetParentFolder(arrFI.ElementAt(0).DirectoryName);
+            IShellFolder? oParentFolder = GetParentFolder(arrFI.ElementAt(0).DirectoryName!);
             if (null == oParentFolder)
             {
                 return null;
@@ -338,14 +338,14 @@ namespace Peter
         /// </summary>
         /// <param name="arrFI">Array of DirectoryInfo</param>
         /// <returns>Array of PIDLs</returns>
-        protected IntPtr[] GetPIDLs(IEnumerable<DirectoryInfo> arrFI)
+        protected IntPtr[]? GetPIDLs(IEnumerable<DirectoryInfo> arrFI)
         {
             if (null == arrFI || !arrFI.Any())
             {
                 return null;
             }
 
-            IShellFolder oParentFolder = GetParentFolder(arrFI.ElementAt(0).Parent.FullName);
+            IShellFolder? oParentFolder = GetParentFolder(arrFI.ElementAt(0).Parent!.FullName!);
             if (null == oParentFolder)
             {
                 return null;
@@ -405,7 +405,7 @@ namespace Peter
 
             try
             {
-                _arrPIDLs = GetPIDLs(arrFI);
+                _arrPIDLs = GetPIDLs(arrFI)!;
                 _arrFI = arrFI.ToArray();
                 if (null == _arrPIDLs)
                 {
@@ -432,7 +432,7 @@ namespace Peter
                 uint nDefaultCmd = (uint)GetMenuDefaultItem(pMenu, false, 0);
                 if (nDefaultCmd >= CMD_FIRST)
                 {
-                    InvokeCommand(_oContextMenu, nDefaultCmd, arrFI.ElementAt(0).DirectoryName, Control.MousePosition);
+                    InvokeCommand(_oContextMenu, nDefaultCmd, arrFI.ElementAt(0).DirectoryName!, Control.MousePosition);
                 }
 
                 DestroyMenu(pMenu);
@@ -464,7 +464,7 @@ namespace Peter
         {
             // Release all resources first.
             ReleaseAll();
-            _arrPIDLs = GetPIDLs(files);
+            _arrPIDLs = GetPIDLs(files)!;
             _arrFI = files.ToArray();
             this.ShowContextMenu(pointScreen);
         }
@@ -591,14 +591,14 @@ namespace Peter
         #endregion
 
         #region Local variabled
-        private IContextMenu _oContextMenu;
-        private IContextMenu2 _oContextMenu2;
-        private IContextMenu3 _oContextMenu3;
-        private IShellFolder _oDesktopFolder;
-        private IShellFolder _oParentFolder;
-        private IntPtr[] _arrPIDLs;
-        private FileInfo[] _arrFI;
-        private string _strParentFolder;
+        private IContextMenu _oContextMenu = null!;
+        private IContextMenu2 _oContextMenu2 = null!;
+        private IContextMenu3 _oContextMenu3 = null!;
+        private IShellFolder _oDesktopFolder = null!;
+        private IShellFolder _oParentFolder = null!;
+        private IntPtr[] _arrPIDLs = null!;
+        private FileInfo[] _arrFI = null!;
+        private string _strParentFolder = null!;
         #endregion
 
         #region Variables and Constants
@@ -1516,7 +1516,7 @@ namespace Peter
         // ************************************************************************
         // Internal properties
         protected IntPtr m_hhook = IntPtr.Zero;
-        protected HookProc m_filterFunc = null;
+        protected HookProc m_filterFunc = null!;
         protected HookType m_hookType;
         // ************************************************************************
 
@@ -1527,7 +1527,7 @@ namespace Peter
 
         // ************************************************************************
         // Event: HookInvoked
-        public event HookEventHandler HookInvoked;
+        public event HookEventHandler HookInvoked = default!;
         protected void OnHookInvoked(HookEventArgs e)
         {
             if (HookInvoked != null)
@@ -1576,7 +1576,7 @@ namespace Peter
                 m_hookType,
                 m_filterFunc,
                 IntPtr.Zero,
-                (int)AppDomain.GetCurrentThreadId());
+                Environment.CurrentManagedThreadId);
         }
         // ************************************************************************
 
