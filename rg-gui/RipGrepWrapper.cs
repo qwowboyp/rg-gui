@@ -1,4 +1,4 @@
-﻿using CliWrap;
+using CliWrap;
 using CliWrap.EventStream;
 using System;
 using System.Collections.Concurrent;
@@ -17,7 +17,8 @@ namespace rg_gui
         public enum FileEncoding
         {
             Auto,
-            GBK
+            GBK,
+            Big5
         }
 
         public enum MaxFileSizeUnit
@@ -108,12 +109,58 @@ namespace rg_gui
 
             m_searchTermCount = searchParameters.SearchStrings.Count();
 
+            if (searchParameters.Encoding == FileEncoding.Auto)
+            {
+                searchParameters.Encoding = DetectEncoding(searchParameters.StartPath);
+            }
+
             for (var i = 0; i < m_searchTermCount; i++)
             {
                 searchTasks.Add(Search(searchParameters, cancellationToken, i));
             }
 
             await Task.WhenAll(searchTasks);
+        }
+
+        /// <summary>
+        /// 取樣目錄中的前幾個檔案，偵測是否為 Big5 編碼
+        /// </summary>
+        private static FileEncoding DetectEncoding(string startPath)
+        {
+            try
+            {
+                var sampleFile = Directory.EnumerateFiles(startPath, "*", SearchOption.AllDirectories)
+                    .FirstOrDefault();
+
+                if (sampleFile == null) return FileEncoding.Auto;
+
+                var bytes = new byte[Math.Min(4096, new FileInfo(sampleFile).Length)];
+                using (var stream = File.OpenRead(sampleFile))
+                {
+                    stream.Read(bytes, 0, bytes.Length);
+                }
+
+                if (bytes.Length >= 3 && bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF)
+                    return FileEncoding.Auto;
+
+                if (bytes.Length >= 2 && bytes[0] == 0xFF && bytes[1] == 0xFE)
+                    return FileEncoding.Auto;
+
+                var decoded = Encoding.UTF8.GetString(bytes);
+                var replacementCount = 0;
+                for (var i = 0; i < decoded.Length; i++)
+                {
+                    if (decoded[i] == '\uFFFD') replacementCount++;
+                }
+
+                if (replacementCount > bytes.Length / 100)
+                    return FileEncoding.Big5;
+            }
+            catch
+            {
+            }
+
+            return FileEncoding.Auto;
         }
 
         private async Task Search(SearchParameters searchParameters, CancellationToken cancellationToken, int termIndex)
@@ -125,73 +172,79 @@ namespace rg_gui
                 return;
             }
 
-            var argsBuilder = new StringBuilder();
-            argsBuilder.Append("-uu ");
-            argsBuilder.Append("--no-heading ");
-            argsBuilder.Append("--line-number ");
-            argsBuilder.Append($"--field-match-separator=\"{fieldMatchSeparator}\" ");
-
-            if (searchParameters.IgnoreCase)
-            {
-                argsBuilder.Append("-i ");
-            }
-
-            if (searchParameters.IncludeHiddenFiles)
-            {
-                argsBuilder.Append("--hidden ");
-            }
-
-            if (!searchParameters.Recursive)
-            {
-                argsBuilder.Append("--max-depth=1 ");
-            }
-
-            if (!searchParameters.RegularExpression)
-            {
-                argsBuilder.Append("--fixed-strings ");
-            }
-
-            if (!string.IsNullOrWhiteSpace(searchParameters.IncludePatterns))
-            {
-                argsBuilder.Append("--iglob={");
-                argsBuilder.AppendJoin(",", GetSearchPatterns(searchParameters.IncludePatterns));
-                argsBuilder.Append("} ");
-            }
-
-            if (searchParameters.ExcludePatterns.Any())
-            {
-                argsBuilder.Append("--iglob=!{");
-                argsBuilder.AppendJoin(",", GetSearchPatterns(searchParameters.ExcludePatterns));
-                argsBuilder.Append("} ");
-            }
-
-            argsBuilder.Append("--color always ");
-
-            if (searchParameters.Encoding != FileEncoding.Auto)
-            {
-                argsBuilder.Append($"-E {EncodingTypes[searchParameters.Encoding]} ");
-            }
-
-            if (searchParameters.MaxFileSizeUnit != MaxFileSizeUnit.None)
-            {
-                argsBuilder.Append($"--max-filesize {searchParameters.MaxFileSize}{(searchParameters.MaxFileSizeUnit != MaxFileSizeUnit.B ? searchParameters.MaxFileSizeUnit : string.Empty)} ");
-            }
-
-            // Signal no more flags will be set.
-            argsBuilder.Append("-- ");
-
-            var searchString = searchParameters.SearchStrings.ElementAt(termIndex);
-
-            if (!string.IsNullOrWhiteSpace(searchString))
-            {
-                argsBuilder.Append(searchString);
-                argsBuilder.Append(' ');
-            }
-
-            argsBuilder.Append($"\"{searchParameters.StartPath}\"");
-
             var cmd = Cli.Wrap(m_ripGrepPath)
-                .WithArguments(argsBuilder.ToString())
+                .WithArguments(args =>
+                {
+                    args.Add("-uu");
+                    args.Add("--no-heading");
+                    args.Add("--line-number");
+                    args.Add("--field-match-separator").Add(fieldMatchSeparator);
+
+                    if (searchParameters.IgnoreCase)
+                    {
+                        args.Add("-i");
+                    }
+
+                    if (searchParameters.IncludeHiddenFiles)
+                    {
+                        args.Add("--hidden");
+                    }
+
+                    if (!searchParameters.Recursive)
+                    {
+                        args.Add("--max-depth=1");
+                    }
+
+                    if (!searchParameters.RegularExpression)
+                    {
+                        args.Add("--fixed-strings");
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(searchParameters.IncludePatterns))
+                    {
+                        var includePatterns = GetSearchPatterns(searchParameters.IncludePatterns);
+                        if (includePatterns.Any())
+                        {
+                            args.Add($"--iglob={string.Join(",", includePatterns)}");
+                        }
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(searchParameters.ExcludePatterns))
+                    {
+                        var excludePatterns = GetSearchPatterns(searchParameters.ExcludePatterns);
+                        if (excludePatterns.Any())
+                        {
+                            args.Add($"--iglob=!{string.Join(",", excludePatterns)}");
+                        }
+                    }
+
+                    args.Add("--color");
+                    args.Add("always");
+
+                    if (searchParameters.Encoding != FileEncoding.Auto)
+                    {
+                        args.Add("-E");
+                        args.Add(EncodingTypes[searchParameters.Encoding]);
+                    }
+
+                    if (searchParameters.MaxFileSizeUnit != MaxFileSizeUnit.None)
+                    {
+                        var unitSuffix = searchParameters.MaxFileSizeUnit != MaxFileSizeUnit.B
+                            ? searchParameters.MaxFileSizeUnit.ToString()
+                            : string.Empty;
+                        args.Add($"--max-filesize={searchParameters.MaxFileSize}{unitSuffix}");
+                    }
+
+                    args.Add("--");
+
+                    var searchString = searchParameters.SearchStrings.ElementAt(termIndex);
+                    if (!string.IsNullOrWhiteSpace(searchString))
+                    {
+                        args.Add(searchString);
+                    }
+
+                    args.Add(searchParameters.StartPath);
+                })
                 .WithValidation(CommandResultValidation.None);
             
             try
@@ -217,10 +270,11 @@ namespace rg_gui
 
                                     if (!string.IsNullOrWhiteSpace(path) && !string.IsNullOrWhiteSpace(filename))
                                     {
+                                        var alreadyReported = FilesFound.Any(x => x.path == path && x.filename == filename && x.termIndex != termIndex);
                                         if (!FilesFound.Contains((path, filename, termIndex)))
                                         {
                                             FilesFound.Add((path, filename, termIndex));
-                                            if (FilesFound.Where(x => x.path == path && x.filename == filename).Count() == m_searchTermCount)
+                                            if (!alreadyReported)
                                             {
                                                 RaiseFileFound(path, filename);
                                             }
@@ -256,6 +310,7 @@ namespace rg_gui
         {
             { FileEncoding.Auto, string.Empty },
             { FileEncoding.GBK, "GBK" },
+            { FileEncoding.Big5, "big5" },
         };
 
         private static IEnumerable<string> GetSearchPatterns(string patternString)
