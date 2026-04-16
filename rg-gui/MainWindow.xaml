@@ -72,6 +72,8 @@
                 <ColumnDefinition Width="Auto"/>
                 <ColumnDefinition Width="40"/>
                 <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="40"/>
             </Grid.ColumnDefinitions>
             <CheckBox Grid.Row="1" Grid.Column="0" Margin="0,0,0,5" x:Name="chkRecursive" Content="遞迴搜尋" VerticalContentAlignment="Center"/>
             <CheckBox Grid.Row="1" Grid.Column="1" Margin="15,0,0,5" x:Name="chkCaseSensitive" Content="區分大小寫" VerticalContentAlignment="Center"/>
@@ -91,6 +93,8 @@
                 <ComboBoxItem x:Name="Megabytes" Content="MB"/>
                 <ComboBoxItem x:Name="Gigabytes" Content="GB"/>
             </ComboBox>
+            <TextBlock Grid.Row="1" Grid.Column="8" Margin="15,0,0,5" Text="上下文行數：" VerticalAlignment="Center"/>
+            <TextBox Grid.Row="1" Grid.Column="9" Margin="5,0,0,5" x:Name="txtContextLines" VerticalAlignment="Center" TextAlignment="Right" TextChanged="txtContextLines_TextChanged"/>
         </Grid>
 
         <Grid Grid.Row="2" x:Name="gridResults">

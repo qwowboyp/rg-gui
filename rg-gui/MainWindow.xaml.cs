@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -44,6 +45,8 @@ namespace rg_gui
         private const int DEFAULT_MAXFILESIZE = 0;
         private const string DEFAULT_MAXFILESIZEUNIT = "None";
 
+        private const int DEFAULT_CONTEXTLINES = 0;
+
         private const int DEFAULT_MAXSEARCHTERMS = 10;
 
         private const int HIGHLIGHT_COLORS_COUNT = 4;
@@ -58,8 +61,9 @@ namespace rg_gui
         private IEnumerable<string> m_folderSuggestionValues = Enumerable.Empty<string>();
 
         private int m_maxSearchTerms;
+        private int m_lastContextLines = 0;
 
-        private const ThemeType DEFAULT_THEME = ThemeType.Light;
+        private const ThemeType DEFAULT_THEME = ThemeType.Dark; // opqlo [佈景主題]-預設深色模式
         private ThemeType m_currentTheme;
 
         private const bool DEFAULT_MULTIPLEHIGHLIGHTCOLORS = true;
@@ -160,6 +164,8 @@ namespace rg_gui
                 cmbFileSizeUnit.SelectedIndex = 0;
             }
 
+            txtContextLines.Text = (int.TryParse(config.AppSettings.Settings["ContextLines"]?.Value, out var contextLines) ? contextLines : DEFAULT_CONTEXTLINES).ToString();
+
             m_currentTheme = Enum.TryParse<ThemeType>(config.AppSettings.Settings["Theme"]?.Value, out var themeName) ? themeName : DEFAULT_THEME;
             ThemesController.SetTheme(m_currentTheme);
 
@@ -231,6 +237,7 @@ namespace rg_gui
             SetConfigValue(config, "FileEncoding", ((ComboBoxItem)cmbEncoding.SelectedItem).Name);
             SetConfigValue(config, "MaxFileSize", txtMaxFileSize.Text);
             SetConfigValue(config, "MaxFileSizeUnit", ((ComboBoxItem)cmbFileSizeUnit.SelectedItem).Name);
+            SetConfigValue(config, "ContextLines", txtContextLines.Text);
             SetConfigValue(config, "Theme", m_currentTheme.ToString());
             SetConfigValue(config, "MultipleHighlightColors", m_multipleHighlightColors.ToString());
             config.Save();
@@ -522,21 +529,25 @@ namespace rg_gui
                 return;
             }
 
-            // based on https://stackoverflow.com/questions/66598956/how-to-stop-a-method-triggered-by-button-click-in-wpf
+            await RunSearch(null, null);
+        }
 
+        /// <summary>
+        /// 執行搜尋。傳入欲恢復焦點的檔案與行號，為 null 則不恢復。
+        /// </summary>
+        private async Task RunSearch(string? restorePath, string? restoreFilename)
+        {
             if (m_cancellationTokenSource != null)
             {
                 return;
             }
 
-            // Based on https://stackoverflow.com/questions/52194058/regex-with-escaped-double-quotes
             var searchTerms = Regex.Matches(txtContainingText.Text, @"""[^""\\]*(?:\\.[^""\\]*)*""|([^\s])+|[^\s""]+");
             if (searchTerms.Count < 1)
             {
                 return;
             }
 
-            // Sanity check -- allow minimum of one search term.
             if (m_maxSearchTerms < 1)
             {
                 m_maxSearchTerms = 1;
@@ -546,6 +557,12 @@ namespace rg_gui
             {
                 MessageBox.Show($"搜尋內容包含超過 {m_maxSearchTerms} 個詞。");
                 return;
+            }
+
+            int? restoreLine = null;
+            if (restorePath != null && restoreFilename != null && gridResultLines.SelectedItem is ResultLine selectedLine)
+            {
+                restoreLine = selectedLine.Line;
             }
 
             var stopwatch = Stopwatch.StartNew();
@@ -581,6 +598,7 @@ namespace rg_gui
                     Encoding = (FileEncoding)cmbEncoding.SelectedIndex,
                     MaxFileSize = int.Parse(txtMaxFileSize.Text),
                     MaxFileSizeUnit = (MaxFileSizeUnit)cmbFileSizeUnit.SelectedIndex,
+                    ContextLines = int.TryParse(txtContextLines.Text, out var ctx) ? ctx : 0,
                 };
 
                 FileResultItems.Reset(Enumerable.Empty<FileSearchResult>());
@@ -599,6 +617,34 @@ namespace rg_gui
 
             stopwatch.Stop();
             txtFileListStatus.Text = $"已找到 {FileResultItems.Count} 個檔案。耗時 {stopwatch.Elapsed.TotalSeconds:0.00} 秒。";
+
+            if (restorePath != null && restoreFilename != null)
+            {
+                RestoreSelection(restorePath, restoreFilename, restoreLine);
+            }
+        }
+
+        /// <summary>
+        /// 搜尋完成後恢復之前的選取狀態。
+        /// </summary>
+        private void RestoreSelection(string restorePath, string restoreFilename, int? restoreLine)
+        {
+            var fileItem = FileResultItems.FirstOrDefault(x => x.Path == restorePath && x.Filename == restoreFilename);
+            if (fileItem != null)
+            {
+                gridFileResults.SelectedItem = fileItem;
+                gridFileResults.ScrollIntoView(fileItem);
+
+                if (restoreLine.HasValue)
+                {
+                    var lineItem = ResultLineItems.FirstOrDefault(x => x.Line == restoreLine.Value);
+                    if (lineItem != null)
+                    {
+                        gridResultLines.SelectedItem = lineItem;
+                        gridResultLines.ScrollIntoView(lineItem);
+                    }
+                }
+            }
         }
 
         private void btnBrowse_Click(object sender, RoutedEventArgs e)
@@ -689,6 +735,35 @@ namespace rg_gui
         {
             var input = txtMaxFileSize.Text;
             txtMaxFileSize.Text = new string(input.Where(c => char.IsDigit(c)).ToArray());
+        }
+
+        private async void txtContextLines_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            var input = txtContextLines.Text;
+            txtContextLines.Text = new string(input.Where(c => char.IsDigit(c)).ToArray());
+
+            var newVal = int.TryParse(txtContextLines.Text, out var v) ? v : 0;
+            if (newVal != m_lastContextLines && FileResultItems.Count > 0 && m_cancellationTokenSource == null)
+            {
+                m_lastContextLines = newVal;
+
+                string? restorePath = null;
+                string? restoreFilename = null;
+                if (gridFileResults.SelectedItem is FileSearchResult selected)
+                {
+                    restorePath = selected.Path;
+                    restoreFilename = selected.Filename;
+                }
+
+                if (!string.IsNullOrWhiteSpace(txtBasePath.Text) && Directory.Exists(txtBasePath.Text))
+                {
+                    await RunSearch(restorePath, restoreFilename);
+                }
+            }
+            else
+            {
+                m_lastContextLines = newVal;
+            }
         }
 
         private void cmbFileSizeUnit_SelectionChanged(object sender, SelectionChangedEventArgs e)

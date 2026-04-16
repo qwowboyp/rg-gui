@@ -53,6 +53,8 @@ namespace rg_gui
             public int MaxFileSize { get; set; }
 
             public MaxFileSizeUnit MaxFileSizeUnit { get; set; } = MaxFileSizeUnit.None;
+
+            public int ContextLines { get; set; }
         }
 
         public class TermResult
@@ -179,6 +181,7 @@ namespace rg_gui
                     args.Add("--no-heading");
                     args.Add("--line-number");
                     args.Add("--field-match-separator").Add(fieldMatchSeparator);
+                    args.Add("--field-context-separator").Add(fieldMatchSeparator);
 
                     if (searchParameters.IgnoreCase)
                     {
@@ -233,6 +236,12 @@ namespace rg_gui
                             ? searchParameters.MaxFileSizeUnit.ToString()
                             : string.Empty;
                         args.Add($"--max-filesize={searchParameters.MaxFileSize}{unitSuffix}");
+                    }
+
+                    if (searchParameters.ContextLines > 0)
+                    {
+                        args.Add($"-C");
+                        args.Add(searchParameters.ContextLines.ToString());
                     }
 
                     args.Add("--");
