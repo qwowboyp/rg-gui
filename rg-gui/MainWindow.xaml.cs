@@ -3,6 +3,7 @@ using Ookii.Dialogs.Wpf;
 using Peter;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
@@ -15,6 +16,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
+using System.Windows.Data;
 using System.Windows.Media;
 using static rg_gui.RipGrepWrapper;
 
@@ -68,17 +70,19 @@ namespace rg_gui
 
         private const bool DEFAULT_MULTIPLEHIGHLIGHTCOLORS = true;
         private bool m_multipleHighlightColors = DEFAULT_MULTIPLEHIGHLIGHTCOLORS;
+        private bool m_sortByDate = false; // opqlo [排序模式]-false=依名稱 true=依修改日期
 
         public class FileSearchResult
         {
-            public string Path { get; }
+            public string Path { get; } // opqlo [搜尋結果]-檔案所在路徑
+            public string Filename { get; } // opqlo [搜尋結果]-檔案名稱
+            public DateTime LastWriteTime { get; } // opqlo [搜尋結果]-最後修改時間
 
-            public string Filename { get; }
-
-            public FileSearchResult(string path, string filename)
+            public FileSearchResult(string path, string filename, DateTime lastWriteTime)
             {
                 Path = path;
                 Filename = filename;
+                LastWriteTime = lastWriteTime;
             }
         }
 
@@ -252,7 +256,9 @@ namespace rg_gui
                 // Ensure the same result won't be added multiple times.
                 if (!FileResultItems.Any(x => x.Path == result.path && x.Filename == result.filename))
                 {
-                    FileResultItems.Add(new FileSearchResult(result.path, result.filename));
+                    var fullPath = System.IO.Path.Combine(result.path, result.filename);
+                    var lastWriteTime = File.Exists(fullPath) ? File.GetLastWriteTime(fullPath) : DateTime.MinValue;
+                    FileResultItems.Add(new FileSearchResult(result.path, result.filename, lastWriteTime));
                     txtFileListStatus.Text = $"已找到 {FileResultItems.Count} 個檔案。";
                 }
             });
@@ -385,6 +391,12 @@ namespace rg_gui
             };
             shellContextMenuItem.Click += (_, _) => ShowShellContextMenu(selectedFiles, screenPoint);
 
+            var sortMenuItem = new MenuItem
+            {
+                Header = m_sortByDate ? "排序：依修改日期 ▼" : "排序：依名稱 ▼",
+            };
+            sortMenuItem.Click += (_, _) => ToggleSortMode();
+
             contextMenu.Items.Add(openFileMenuItem);
             contextMenu.Items.Add(editFileMenuItem);
             contextMenu.Items.Add(new Separator());
@@ -392,9 +404,34 @@ namespace rg_gui
             contextMenu.Items.Add(copyFileNameMenuItem);
             contextMenu.Items.Add(openFileLocationMenuItem);
             contextMenu.Items.Add(new Separator());
+            contextMenu.Items.Add(sortMenuItem);
             contextMenu.Items.Add(shellContextMenuItem);
 
             contextMenu.IsOpen = true;
+        }
+
+        private void ToggleSortMode()
+        {
+            m_sortByDate = !m_sortByDate;
+            ApplyFileSort();
+        }
+
+        private void ApplyFileSort()
+        {
+            var view = (CollectionView)CollectionViewSource.GetDefaultView(gridFileResults.ItemsSource);
+            if (view == null) return;
+
+            view.SortDescriptions.Clear();
+            if (m_sortByDate)
+            {
+                view.SortDescriptions.Add(new SortDescription("LastWriteTime", ListSortDirection.Descending));
+                view.SortDescriptions.Add(new SortDescription("Filename", ListSortDirection.Ascending));
+            }
+            else
+            {
+                view.SortDescriptions.Add(new SortDescription("Path", ListSortDirection.Ascending));
+                view.SortDescriptions.Add(new SortDescription("Filename", ListSortDirection.Ascending));
+            }
         }
 
         /// <summary>
