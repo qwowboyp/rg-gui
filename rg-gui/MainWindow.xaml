@@ -6,7 +6,7 @@
         xmlns:scm="clr-namespace:System.ComponentModel;assembly=WindowsBase"
         xmlns:local="clr-namespace:rg_gui"
         mc:Ignorable="d"
-        Title="rg-gui 搜尋工具" Height="450" Width="800"
+        Title="rg-gui 搜尋工具" Height="675" Width="1200" FontSize="14"
         DataContext="{Binding RelativeSource={RelativeSource Self}}"
         Closing="OnClosing" Icon="pack://application:,,,/icon.ico"
         Style="{StaticResource CustomWindowStyle}">
@@ -49,15 +49,27 @@
                 <ColumnDefinition Width="Auto"/>
             </Grid.ColumnDefinitions>
             <Label Grid.Row="0" Grid.Column="0" Margin="0,0,5,5" Content="搜尋資料夾" VerticalContentAlignment="Center"/>
-            <TextBox Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5" x:Name="txtBasePath" TextWrapping="NoWrap" VerticalContentAlignment="Center" TabIndex="0" TextChanged="txtBasePath_TextChanged"/>
+            <Grid Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5">
+                <TextBox x:Name="txtBasePath" TextWrapping="NoWrap" VerticalContentAlignment="Center" TabIndex="0" TextChanged="txtBasePath_TextChanged" GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus"/>
+                <TextBlock x:Name="hintBasePath" Text="例：C:\Projects\my-app" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="Gray" IsHitTestVisible="False" Visibility="Visible"/>
+            </Grid>
             <Button Grid.Row="0" Grid.Column="4" Margin="5,0,0,5" x:Name="btnBrowse" Content="瀏覽" Click="btnBrowse_Click" MinWidth="80" />
             <Button Grid.Row="0" Grid.Column="5" Grid.RowSpan="2" Margin="5,0,0,5" x:Name="btnStart" Content="開始搜尋" Click="btnStart_Click" MinWidth="80" TabIndex="4"/>
             <Label Grid.Row="1" Grid.Column="0" Margin="0,0,5,5" Content="包含檔案" VerticalContentAlignment="Center"/>
-            <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,0,5" x:Name="txtIncludeFiles" TextWrapping="NoWrap" VerticalContentAlignment="Center" TabIndex="1"/>
+            <Grid Grid.Row="1" Grid.Column="1" Margin="0,0,0,5">
+                <TextBox x:Name="txtIncludeFiles" TextWrapping="NoWrap" VerticalContentAlignment="Center" TabIndex="1" GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus" TextChanged="TextBoxPlaceholder_TextChanged"/>
+                <TextBlock x:Name="hintIncludeFiles" Text="*.txt" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="Gray" IsHitTestVisible="False" Visibility="Visible"/>
+            </Grid>
             <Label Grid.Row="1" Grid.Column="2" Margin="5,0,5,5" Content="排除檔案" VerticalContentAlignment="Center"/>
-            <TextBox Grid.Row="1" Grid.Column="3" Margin="0,0,0,5" x:Name="txtExcludeFiles" TextWrapping="NoWrap" VerticalContentAlignment="Center" TabIndex="2"/>
+            <Grid Grid.Row="1" Grid.Column="3" Margin="0,0,0,5">
+                <TextBox x:Name="txtExcludeFiles" TextWrapping="NoWrap" VerticalContentAlignment="Center" TabIndex="2" GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus" TextChanged="TextBoxPlaceholder_TextChanged"/>
+                <TextBlock x:Name="hintExcludeFiles" Text="例：*.log, *.tmp" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="Gray" IsHitTestVisible="False" Visibility="Visible"/>
+            </Grid>
             <Label Grid.Row="2" Grid.Column="0" Margin="0,0,5,5" Content="搜尋內容" VerticalContentAlignment="Center"/>
-            <TextBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5" x:Name="txtContainingText" TextWrapping="NoWrap" VerticalContentAlignment="Center" KeyDown="txtContainingText_OnKeyDown" TabIndex="3"/>
+            <Grid Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Margin="0,0,0,5">
+                <TextBox x:Name="txtContainingText" TextWrapping="NoWrap" VerticalContentAlignment="Center" KeyDown="txtContainingText_OnKeyDown" TabIndex="3" GotFocus="TextBox_GotFocus" LostFocus="TextBox_LostFocus" TextChanged="TextBoxPlaceholder_TextChanged"/>
+                <TextBlock x:Name="hintContainingText" Text="空格或||任一符合　&amp;&amp;全部符合　例：小明&amp;&amp;小美" VerticalAlignment="Center" Margin="4,0,0,0" Foreground="Gray" IsHitTestVisible="False" Visibility="Visible"/>
+            </Grid>
             <Button Grid.Row="2" Grid.Column="4" Margin="5,0,0,5" x:Name="btnSettings" Content="設定" Click="btnSettings_Click" MinWidth="80" TabIndex="6"/>
             <Button Grid.Row="2" Grid.Column="5" Margin="5,0,0,5" x:Name="btnCancel" Content="取消" Click="btnCancel_Click" IsEnabled="False" TabIndex="5"/>
         </Grid>
@@ -113,7 +125,7 @@
                 <ColumnDefinition Width="5"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <DataGrid Grid.Row="0" Grid.Column="0" x:Name="gridFileResults" Background="{DynamicResource DataGrid.Static.Background}" ItemsSource="{Binding Source={StaticResource FileResultItemsCollectionViewSource}}" AutoGenerateColumns="False" MouseDown="gridFileResults_MouseDown" SelectionChanged="gridFileResults_SelectionChanged" GridLinesVisibility="None" BorderThickness="1,1,1,0" CanUserDeleteRows="False">
+            <DataGrid Grid.Row="0" Grid.Column="0" x:Name="gridFileResults" Background="{DynamicResource DataGrid.Static.Background}" ItemsSource="{Binding Source={StaticResource FileResultItemsCollectionViewSource}}" AutoGenerateColumns="False" MouseDown="gridFileResults_MouseDown" SelectionChanged="gridFileResults_SelectionChanged" GridLinesVisibility="None" BorderThickness="1,1,1,0" CanUserDeleteRows="False" PreviewKeyDown="gridFileResults_PreviewKeyDown">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="檔案名稱" Binding="{Binding Filename, Mode=OneWay}" SortDirection="Ascending" Width="*"/>
                 </DataGrid.Columns>

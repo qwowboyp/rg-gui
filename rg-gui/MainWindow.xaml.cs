@@ -29,8 +29,8 @@ namespace rg_gui
     {
         private const double DEFAULT_MAINWINDOW_LEFT = 0;
         private const double DEFAULT_MAINWINDOW_TOP = 0;
-        private const double DEFAULT_MAINWINDOW_WIDTH = 800;
-        private const double DEFAULT_MAINWINDOW_HEIGHT = 450;
+        private const double DEFAULT_MAINWINDOW_WIDTH = 1200; // opqlo [視窗大小調整]-預設寬度調整為150%
+        private const double DEFAULT_MAINWINDOW_HEIGHT = 675; // opqlo [視窗大小調整]-預設高度調整為150%
         private const int DEFAULT_MAINWINDOW_STATE = 0;
 
         private const string DEFAULT_BASEPATH = "";
@@ -71,6 +71,8 @@ namespace rg_gui
         private const bool DEFAULT_MULTIPLEHIGHLIGHTCOLORS = true;
         private bool m_multipleHighlightColors = DEFAULT_MULTIPLEHIGHLIGHTCOLORS;
         private bool m_sortByDate = false; // opqlo [排序模式]-false=依名稱 true=依修改日期
+        private bool m_isAndMode; // opqlo [搜尋模式]-true=AND 全部符合
+        private int m_searchTermCount; // opqlo [搜尋詞數量]
 
         public class FileSearchResult
         {
@@ -185,6 +187,53 @@ namespace rg_gui
 
             m_ripGrepWrapper = new RipGrepWrapper(ripgrepPath);
             m_ripGrepWrapper.FileFound += OnFileAdded;
+
+            UpdatePlaceholderHints(); // opqlo [輸入提示]-初始化提示文字狀態
+        }
+
+        /// <summary>更新所有輸入框的提示文字顯示狀態</summary>
+        private void UpdatePlaceholderHints()
+        {
+            hintBasePath.Visibility = string.IsNullOrEmpty(txtBasePath.Text) ? Visibility.Visible : Visibility.Collapsed;
+            hintIncludeFiles.Visibility = string.IsNullOrEmpty(txtIncludeFiles.Text) ? Visibility.Visible : Visibility.Collapsed;
+            hintExcludeFiles.Visibility = string.IsNullOrEmpty(txtExcludeFiles.Text) ? Visibility.Visible : Visibility.Collapsed;
+            hintContainingText.Visibility = string.IsNullOrEmpty(txtContainingText.Text) ? Visibility.Visible : Visibility.Collapsed;
+        }
+
+        /// <summary>輸入框取得焦點時隱藏提示文字</summary>
+        private void TextBox_GotFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is not TextBox textBox) return;
+            var hint = FindHint(textBox);
+            if (hint != null) hint.Visibility = Visibility.Collapsed;
+        }
+
+        /// <summary>輸入框失去焦點時，若為空則顯示提示文字</summary>
+        private void TextBox_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (sender is not TextBox textBox) return;
+            var hint = FindHint(textBox);
+            if (hint != null && string.IsNullOrEmpty(textBox.Text))
+                hint.Visibility = Visibility.Visible;
+        }
+
+        /// <summary>根據 TextBox 名稱找到對應的提示 TextBlock</summary>
+        private TextBlock? FindHint(TextBox textBox) => textBox.Name switch
+        {
+            "txtBasePath" => hintBasePath,
+            "txtIncludeFiles" => hintIncludeFiles,
+            "txtExcludeFiles" => hintExcludeFiles,
+            "txtContainingText" => hintContainingText,
+            _ => null
+        };
+
+        /// <summary>輸入框內容變更時同步更新提示文字</summary>
+        private void TextBoxPlaceholder_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (sender is not TextBox textBox) return;
+            var hint = FindHint(textBox);
+            if (hint != null)
+                hint.Visibility = string.IsNullOrEmpty(textBox.Text) ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private static void SetConfigValue(Configuration config, string key, string value)
@@ -522,6 +571,12 @@ namespace rg_gui
 
                     foreach (var lineResult in lineResults)
                     {
+                        if (m_isAndMode && m_searchTermCount > 1)
+                        {
+                            var matchedTerms = lineResult.Value.TermResults.Select(t => t.TermIndex).Distinct().Count();
+                            if (matchedTerms < m_searchTermCount) continue;
+                        }
+
                         ResultLineItems.Add(new ResultLine(lineResult.Key.lineNumber, GetColorizedString(lineResult.Value.LineContent, lineResult.Value.TermResults).Trim()));
                     }
 
@@ -532,11 +587,18 @@ namespace rg_gui
         }
 
         /// <summary>
-        /// 在內容 DataGrid 中攔截上下方向鍵，手動切換選取行。
-        /// 因為 SelectableTextBlock 內部 TextEditor 會攔截方向鍵，導致無法用鍵盤上下導航。
+        /// 在內容 DataGrid 中攔截方向鍵：上下切換選取行，左鍵移焦點至檔案清單。
+        /// 因為 SelectableTextBlock 內部 TextEditor 會攔截方向鍵，導致無法用鍵盤導航。
         /// </summary>
         private void gridResultLines_PreviewKeyDown(object sender, KeyEventArgs e)
         {
+            if (e.Key == Key.Left)
+            {
+                MoveFocusToDataGrid(gridFileResults);
+                e.Handled = true;
+                return;
+            }
+
             if (e.Key != Key.Up && e.Key != Key.Down)
             {
                 return;
@@ -559,6 +621,45 @@ namespace rg_gui
             if (e.Handled && dataGrid.SelectedItem != null)
             {
                 dataGrid.ScrollIntoView(dataGrid.SelectedItem);
+            }
+        }
+
+        /// <summary>
+        /// 在檔案清單 DataGrid 中攔截右鍵，移焦點至內容清單。
+        /// </summary>
+        private void gridFileResults_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Right)
+            {
+                MoveFocusToDataGrid(gridResultLines);
+                e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// 將焦點移至目標 DataGrid 並聚焦其當前選取行。
+        /// </summary>
+        private static void MoveFocusToDataGrid(DataGrid target)
+        {
+            if (target.Items.Count == 0) return;
+
+            if (target.SelectedIndex < 0)
+            {
+                target.SelectedIndex = 0;
+            }
+
+            target.Focus();
+
+            if (target.SelectedItem != null)
+            {
+                var row = (DataGridRow?)target.ItemContainerGenerator.ContainerFromItem(target.SelectedItem);
+                if (row == null)
+                {
+                    target.ScrollIntoView(target.SelectedItem);
+                    target.UpdateLayout();
+                    row = (DataGridRow?)target.ItemContainerGenerator.ContainerFromItem(target.SelectedItem);
+                }
+                row?.Focus();
             }
         }
 
@@ -611,18 +712,47 @@ namespace rg_gui
                 return;
             }
 
-            var searchTerms = Regex.Matches(txtContainingText.Text, @"""[^""\\]*(?:\\.[^""\\]*)*""|([^\s])+|[^\s""]+");
-            if (searchTerms.Count < 1)
+            var searchText = txtContainingText.Text;
+            var isAndMode = false;
+            List<string> termList;
+
+            if (searchText.Contains("&&"))
+            {
+                isAndMode = true;
+                termList = searchText.Split(["&&"], StringSplitOptions.None)
+                    .Select(s => s.Trim().Trim('"'))
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .ToList();
+            }
+            else if (searchText.Contains("||"))
+            {
+                termList = searchText.Split(["||"], StringSplitOptions.None)
+                    .Select(s => s.Trim().Trim('"'))
+                    .Where(s => !string.IsNullOrWhiteSpace(s))
+                    .ToList();
+            }
+            else
+            {
+                termList = Regex.Matches(searchText, @"""[^""\\]*(?:\\.[^""\\]*)*""|([^\s])+|[^\s""]+")
+                    .Cast<Match>()
+                    .Select(m => m.Value.Trim('"'))
+                    .ToList();
+            }
+
+            if (termList.Count < 1)
             {
                 return;
             }
+
+            m_isAndMode = isAndMode;
+            m_searchTermCount = termList.Count;
 
             if (m_maxSearchTerms < 1)
             {
                 m_maxSearchTerms = 1;
             }
 
-            if (searchTerms.Count > m_maxSearchTerms)
+            if (termList.Count > m_maxSearchTerms)
             {
                 MessageBox.Show($"搜尋內容包含超過 {m_maxSearchTerms} 個詞。");
                 return;
@@ -659,7 +789,7 @@ namespace rg_gui
                 var searchParameters = new SearchParameters
                 {
                     StartPath = startPath,
-                    SearchStrings = searchTerms.Cast<Match>().Select(x => x.Value),
+                    SearchStrings = termList,
                     IgnoreCase = !(chkCaseSensitive.IsChecked ?? false),
                     Recursive = chkRecursive.IsChecked ?? true,
                     IncludePatterns = txtIncludeFiles.Text,
@@ -686,6 +816,25 @@ namespace rg_gui
             }
 
             stopwatch.Stop();
+
+            if (isAndMode && termList.Count > 1)
+            {
+                var filesMatchingAllTerms = m_ripGrepWrapper.FilesFound
+                    .GroupBy(x => (x.path, x.filename))
+                    .Where(g => g.Select(x => x.termIndex).Distinct().Count() == m_searchTermCount)
+                    .Select(g => g.Key)
+                    .ToHashSet();
+
+                var filesToRemove = FileResultItems
+                    .Where(f => !filesMatchingAllTerms.Contains((f.Path, f.Filename)))
+                    .ToList();
+
+                foreach (var file in filesToRemove)
+                {
+                    FileResultItems.Remove(file);
+                }
+            }
+
             txtFileListStatus.Text = $"已找到 {FileResultItems.Count} 個檔案。耗時 {stopwatch.Elapsed.TotalSeconds:0.00} 秒。";
 
             if (restorePath != null && restoreFilename != null)
@@ -771,6 +920,8 @@ namespace rg_gui
 
         private void txtBasePath_TextChanged(object sender, TextChangedEventArgs e)
         {
+            hintBasePath.Visibility = string.IsNullOrEmpty(txtBasePath.Text) ? Visibility.Visible : Visibility.Collapsed;
+
             UpdateFolderSuggestionValues();
 
             // Based on https://learn.microsoft.com/en-us/answers/questions/840981/auto-complete-for-textbox-in-wpf-(mvvm)
