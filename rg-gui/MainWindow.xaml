@@ -13,7 +13,7 @@
     <Window.Resources>
         <CollectionViewSource x:Key="FileResultItemsCollectionViewSource" Source="{Binding FileResultItems}">
             <CollectionViewSource.SortDescriptions>
-                <scm:SortDescription PropertyName="Path" Direction="Ascending" />
+                <scm:SortDescription PropertyName="LastWriteTime" Direction="Descending" />
                 <scm:SortDescription PropertyName="Filename" Direction="Ascending" />
             </CollectionViewSource.SortDescriptions>
         </CollectionViewSource>

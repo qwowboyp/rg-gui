@@ -70,7 +70,7 @@ namespace rg_gui
 
         private const bool DEFAULT_MULTIPLEHIGHLIGHTCOLORS = true;
         private bool m_multipleHighlightColors = DEFAULT_MULTIPLEHIGHLIGHTCOLORS;
-        private bool m_sortByDate = false; // opqlo [排序模式]-false=依名稱 true=依修改日期
+        private bool m_sortByDate = true; // opqlo [排序模式]-false=依名稱 true=依修改日期
         private bool m_isAndMode; // opqlo [搜尋模式]-true=AND 全部符合
         private int m_searchTermCount; // opqlo [搜尋詞數量]
 
