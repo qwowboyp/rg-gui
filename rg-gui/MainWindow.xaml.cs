@@ -531,6 +531,37 @@ namespace rg_gui
             }
         }
 
+        /// <summary>
+        /// 在內容 DataGrid 中攔截上下方向鍵，手動切換選取行。
+        /// 因為 SelectableTextBlock 內部 TextEditor 會攔截方向鍵，導致無法用鍵盤上下導航。
+        /// </summary>
+        private void gridResultLines_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key != Key.Up && e.Key != Key.Down)
+            {
+                return;
+            }
+
+            var dataGrid = (DataGrid)sender;
+            var currentIndex = dataGrid.SelectedIndex;
+
+            if (e.Key == Key.Up && currentIndex > 0)
+            {
+                dataGrid.SelectedIndex = currentIndex - 1;
+                e.Handled = true;
+            }
+            else if (e.Key == Key.Down && currentIndex < dataGrid.Items.Count - 1)
+            {
+                dataGrid.SelectedIndex = currentIndex + 1;
+                e.Handled = true;
+            }
+
+            if (e.Handled && dataGrid.SelectedItem != null)
+            {
+                dataGrid.ScrollIntoView(dataGrid.SelectedItem);
+            }
+        }
+
         private void grid_RequestBringIntoViewHandler(object sender, RequestBringIntoViewEventArgs e)
         {
             e.Handled = true;

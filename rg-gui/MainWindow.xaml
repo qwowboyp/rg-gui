@@ -119,7 +119,7 @@
                 </DataGrid.Columns>
             </DataGrid>
             <GridSplitter Grid.Row="0" Grid.Column="1" Width="5" ResizeBehavior="PreviousAndNext" BorderThickness="0,1,0,0" BorderBrush="#FF688CAF"/>
-            <DataGrid Grid.Row="0" Grid.Column="2" x:Name="gridResultLines" Background="{DynamicResource DataGrid.Static.Background}" ItemsSource="{Binding Source={StaticResource ResultLineItemsCollectionViewSource}}" AutoGenerateColumns="False" GridLinesVisibility="None" BorderThickness="1,1,1,0" CanUserDeleteRows="False" SelectionUnit="FullRow">
+            <DataGrid Grid.Row="0" Grid.Column="2" x:Name="gridResultLines" Background="{DynamicResource DataGrid.Static.Background}" ItemsSource="{Binding Source={StaticResource ResultLineItemsCollectionViewSource}}" AutoGenerateColumns="False" GridLinesVisibility="None" BorderThickness="1,1,1,0" CanUserDeleteRows="False" SelectionUnit="FullRow" PreviewKeyDown="gridResultLines_PreviewKeyDown">
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Style.Setters>
