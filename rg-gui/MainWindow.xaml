@@ -94,7 +94,17 @@
                 <ComboBoxItem x:Name="Gigabytes" Content="GB"/>
             </ComboBox>
             <TextBlock Grid.Row="1" Grid.Column="8" Margin="15,0,0,5" Text="上下文行數：" VerticalAlignment="Center"/>
-            <TextBox Grid.Row="1" Grid.Column="9" Margin="5,0,0,5" x:Name="txtContextLines" VerticalAlignment="Center" TextAlignment="Right" TextChanged="txtContextLines_TextChanged"/>
+            <Grid Grid.Row="1" Grid.Column="9" Margin="5,0,0,5" VerticalAlignment="Center">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="18"/>
+                </Grid.ColumnDefinitions>
+                <TextBox x:Name="txtContextLines" TextAlignment="Right" TextChanged="txtContextLines_TextChanged"/>
+                <StackPanel Grid.Column="1" Orientation="Vertical">
+                    <RepeatButton x:Name="btnContextUp" Content="▲" FontSize="7" Padding="0,-2,0,-2" Click="btnContextUp_Click"/>
+                    <RepeatButton x:Name="btnContextDown" Content="▼" FontSize="7" Padding="0,-2,0,-2" Click="btnContextDown_Click"/>
+                </StackPanel>
+            </Grid>
         </Grid>
 
         <Grid Grid.Row="2" x:Name="gridResults">

@@ -805,6 +805,24 @@ namespace rg_gui
             }
         }
 
+        /// <summary>
+        /// 上下文行數加一。
+        /// </summary>
+        private void btnContextUp_Click(object sender, RoutedEventArgs e)
+        {
+            var val = int.TryParse(txtContextLines.Text, out var v) ? v : 0;
+            txtContextLines.Text = (val + 1).ToString();
+        }
+
+        /// <summary>
+        /// 上下文行數減一（最小為零）。
+        /// </summary>
+        private void btnContextDown_Click(object sender, RoutedEventArgs e)
+        {
+            var val = int.TryParse(txtContextLines.Text, out var v) ? v : 0;
+            txtContextLines.Text = Math.Max(0, val - 1).ToString();
+        }
+
         private void cmbFileSizeUnit_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             txtMaxFileSize.IsEnabled = (cmbFileSizeUnit.SelectedIndex != 0);
