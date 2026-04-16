@@ -12,6 +12,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
 using static rg_gui.RipGrepWrapper;
@@ -254,24 +255,212 @@ namespace rg_gui
         {
             if ((e.RightButton == MouseButtonState.Pressed && !SystemParameters.SwapButtons) || (e.LeftButton == MouseButtonState.Pressed && SystemParameters.SwapButtons))
             {
-                var selectedFiles = new List<FileInfo>();
+                SelectRowUnderMouse(e);
 
-                foreach (var selectedItem in gridFileResults.SelectedItems)
-                {
-                    if (selectedItem is FileSearchResult fileSearchResult)
-                    {
-                        selectedFiles.Add(new FileInfo(Path.Combine(fileSearchResult.Path, fileSearchResult.Filename)));
-                    }
-                }
+                var selectedFiles = GetSelectedFiles();
 
                 if (selectedFiles.Any())
                 {
                     var point = PointToScreen(e.MouseDevice.GetPosition(this));
-
-                    var shellContextMenu = new ShellContextMenu();
-                    shellContextMenu.ShowContextMenu(selectedFiles, new System.Drawing.Point((int)point.X, (int)point.Y));
+                    ShowFileResultsContextMenu(selectedFiles, new System.Drawing.Point((int)point.X, (int)point.Y));
+                    e.Handled = true;
                 }
             }
+        }
+
+        /// <summary>
+        /// 選取滑鼠右鍵點到的檔案列。
+        /// </summary>
+        private void SelectRowUnderMouse(MouseEventArgs e)
+        {
+            if (e.OriginalSource is not DependencyObject originalSource)
+            {
+                return;
+            }
+
+            var row = FindAncestor<DataGridRow>(originalSource);
+            if (row == null || row.IsSelected)
+            {
+                return;
+            }
+
+            gridFileResults.SelectedItems.Clear();
+            gridFileResults.SelectedItem = row.Item;
+            row.IsSelected = true;
+            row.Focus();
+        }
+
+        /// <summary>
+        /// 往上尋找指定型別的視覺樹父節點。
+        /// </summary>
+        private static T? FindAncestor<T>(DependencyObject current)
+            where T : DependencyObject
+        {
+            while (true)
+            {
+                if (current is T ancestor)
+                {
+                    return ancestor;
+                }
+
+                var parent = VisualTreeHelper.GetParent(current);
+                if (parent == null)
+                {
+                    return null;
+                }
+
+                current = parent;
+            }
+        }
+
+        /// <summary>
+        /// 取得目前已選取的檔案清單。
+        /// </summary>
+        private List<FileInfo> GetSelectedFiles()
+        {
+            var selectedFiles = new List<FileInfo>();
+
+            foreach (var selectedItem in gridFileResults.SelectedItems)
+            {
+                if (selectedItem is FileSearchResult fileSearchResult)
+                {
+                    selectedFiles.Add(new FileInfo(Path.Combine(fileSearchResult.Path, fileSearchResult.Filename)));
+                }
+            }
+
+            return selectedFiles;
+        }
+
+        /// <summary>
+        /// 顯示檔案結果的自訂右鍵選單。
+        /// </summary>
+        private void ShowFileResultsContextMenu(IReadOnlyList<FileInfo> selectedFiles, System.Drawing.Point screenPoint)
+        {
+            var contextMenu = new ContextMenu
+            {
+                PlacementTarget = gridFileResults,
+                Placement = PlacementMode.MousePoint,
+            };
+
+            var openFileMenuItem = new MenuItem
+            {
+                Header = "開啟",
+            };
+            openFileMenuItem.Click += (_, _) => OpenSelectedFile(selectedFiles);
+
+            var editFileMenuItem = new MenuItem
+            {
+                Header = "編輯",
+            };
+            editFileMenuItem.Click += (_, _) => EditSelectedFile(selectedFiles);
+
+            var copyPathMenuItem = new MenuItem
+            {
+                Header = "複製路徑",
+            };
+            copyPathMenuItem.Click += (_, _) => CopySelectedPaths(selectedFiles);
+
+            var copyFileNameMenuItem = new MenuItem
+            {
+                Header = "複製檔名",
+            };
+            copyFileNameMenuItem.Click += (_, _) => CopySelectedFileNames(selectedFiles);
+
+            var openFileLocationMenuItem = new MenuItem
+            {
+                Header = "開啟檔案位置",
+            };
+            openFileLocationMenuItem.Click += (_, _) => OpenSelectedFileLocation(selectedFiles);
+
+            var shellContextMenuItem = new MenuItem
+            {
+                Header = "Windows 系統選單...",
+            };
+            shellContextMenuItem.Click += (_, _) => ShowShellContextMenu(selectedFiles, screenPoint);
+
+            contextMenu.Items.Add(openFileMenuItem);
+            contextMenu.Items.Add(editFileMenuItem);
+            contextMenu.Items.Add(new Separator());
+            contextMenu.Items.Add(copyPathMenuItem);
+            contextMenu.Items.Add(copyFileNameMenuItem);
+            contextMenu.Items.Add(openFileLocationMenuItem);
+            contextMenu.Items.Add(new Separator());
+            contextMenu.Items.Add(shellContextMenuItem);
+
+            contextMenu.IsOpen = true;
+        }
+
+        /// <summary>
+        /// 以預設程式開啟選取的檔案。
+        /// </summary>
+        private static void OpenSelectedFile(IEnumerable<FileInfo> selectedFiles)
+        {
+            foreach (var file in selectedFiles)
+            {
+                Process.Start(new ProcessStartInfo(file.FullName)
+                {
+                    UseShellExecute = true,
+                });
+            }
+        }
+
+        /// <summary>
+        /// 以 Notepad 編輯第一個選取的檔案。
+        /// </summary>
+        private static void EditSelectedFile(IEnumerable<FileInfo> selectedFiles)
+        {
+            var firstSelectedFile = selectedFiles.FirstOrDefault();
+            if (firstSelectedFile == null)
+            {
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo("notepad.exe", $"\"{firstSelectedFile.FullName}\"")
+            {
+                UseShellExecute = true,
+            });
+        }
+
+        /// <summary>
+        /// 將選取檔案的完整路徑複製到剪貼簿。
+        /// </summary>
+        private static void CopySelectedPaths(IEnumerable<FileInfo> selectedFiles)
+        {
+            Clipboard.SetText(string.Join(Environment.NewLine, selectedFiles.Select(x => x.FullName)));
+        }
+
+        /// <summary>
+        /// 將選取檔案名稱複製到剪貼簿。
+        /// </summary>
+        private static void CopySelectedFileNames(IEnumerable<FileInfo> selectedFiles)
+        {
+            Clipboard.SetText(string.Join(Environment.NewLine, selectedFiles.Select(x => x.Name)));
+        }
+
+        /// <summary>
+        /// 用檔案總管開啟第一個選取檔案的位置。
+        /// </summary>
+        private static void OpenSelectedFileLocation(IEnumerable<FileInfo> selectedFiles)
+        {
+            var firstSelectedFile = selectedFiles.FirstOrDefault();
+            if (firstSelectedFile == null)
+            {
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{firstSelectedFile.FullName}\"")
+            {
+                UseShellExecute = true,
+            });
+        }
+
+        /// <summary>
+        /// 顯示原本的 Windows Shell 系統選單。
+        /// </summary>
+        private static void ShowShellContextMenu(IEnumerable<FileInfo> selectedFiles, System.Drawing.Point screenPoint)
+        {
+            var shellContextMenu = new ShellContextMenu();
+            shellContextMenu.ShowContextMenu(selectedFiles, screenPoint);
         }
 
         private void gridFileResults_SelectionChanged(object? sender, SelectionChangedEventArgs e)

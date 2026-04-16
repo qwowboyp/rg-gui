@@ -99,14 +99,14 @@
                 <ColumnDefinition Width="5"/>
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
-            <DataGrid Grid.Row="0" Grid.Column="0" x:Name="gridFileResults" ItemsSource="{Binding Source={StaticResource FileResultItemsCollectionViewSource}}" AutoGenerateColumns="False" MouseDown="gridFileResults_MouseDown" SelectionChanged="gridFileResults_SelectionChanged" GridLinesVisibility="None" BorderThickness="1,1,1,0" CanUserDeleteRows="False">
+            <DataGrid Grid.Row="0" Grid.Column="0" x:Name="gridFileResults" Background="{DynamicResource DataGrid.Static.Background}" ItemsSource="{Binding Source={StaticResource FileResultItemsCollectionViewSource}}" AutoGenerateColumns="False" MouseDown="gridFileResults_MouseDown" SelectionChanged="gridFileResults_SelectionChanged" GridLinesVisibility="None" BorderThickness="1,1,1,0" CanUserDeleteRows="False">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="檔案名稱" Binding="{Binding Filename, Mode=OneWay}" SortDirection="Ascending"/>
                     <DataGridTextColumn Header="路徑" Binding="{Binding Path, Mode=OneWay}" SortDirection="Ascending"/>
                 </DataGrid.Columns>
             </DataGrid>
             <GridSplitter Grid.Row="0" Grid.Column="1" Width="5" ResizeBehavior="PreviousAndNext" BorderThickness="0,1,0,0" BorderBrush="#FF688CAF"/>
-            <DataGrid Grid.Row="0" Grid.Column="2" x:Name="gridResultLines" ItemsSource="{Binding Source={StaticResource ResultLineItemsCollectionViewSource}}" AutoGenerateColumns="False" GridLinesVisibility="None" BorderThickness="1,1,1,0" CanUserDeleteRows="False" SelectionUnit="FullRow">
+            <DataGrid Grid.Row="0" Grid.Column="2" x:Name="gridResultLines" Background="{DynamicResource DataGrid.Static.Background}" ItemsSource="{Binding Source={StaticResource ResultLineItemsCollectionViewSource}}" AutoGenerateColumns="False" GridLinesVisibility="None" BorderThickness="1,1,1,0" CanUserDeleteRows="False" SelectionUnit="FullRow">
                 <DataGrid.RowStyle>
                     <Style TargetType="DataGridRow">
                         <Style.Setters>
@@ -116,10 +116,10 @@
                 </DataGrid.RowStyle>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="行號" Binding="{Binding Line, Mode=OneWay}" SortDirection="Ascending"/>
-                    <DataGridTemplateColumn Header="內容">
+                    <DataGridTemplateColumn Header="內容" Width="*">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
-                                <local:SelectableTextBlock local:TextBlockFormatter.Text="{Binding Path=Content, Mode=OneWay}" />
+                                <local:SelectableTextBlock HorizontalAlignment="Stretch" local:TextBlockFormatter.Text="{Binding Path=Content, Mode=OneWay}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
