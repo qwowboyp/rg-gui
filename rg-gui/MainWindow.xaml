@@ -105,8 +105,7 @@
             </Grid.ColumnDefinitions>
             <DataGrid Grid.Row="0" Grid.Column="0" x:Name="gridFileResults" Background="{DynamicResource DataGrid.Static.Background}" ItemsSource="{Binding Source={StaticResource FileResultItemsCollectionViewSource}}" AutoGenerateColumns="False" MouseDown="gridFileResults_MouseDown" SelectionChanged="gridFileResults_SelectionChanged" GridLinesVisibility="None" BorderThickness="1,1,1,0" CanUserDeleteRows="False">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="檔案名稱" Binding="{Binding Filename, Mode=OneWay}" SortDirection="Ascending"/>
-                    <DataGridTextColumn Header="路徑" Binding="{Binding Path, Mode=OneWay}" SortDirection="Ascending"/>
+                    <DataGridTextColumn Header="檔案名稱" Binding="{Binding Filename, Mode=OneWay}" SortDirection="Ascending" Width="*"/>
                 </DataGrid.Columns>
             </DataGrid>
             <GridSplitter Grid.Row="0" Grid.Column="1" Width="5" ResizeBehavior="PreviousAndNext" BorderThickness="0,1,0,0" BorderBrush="#FF688CAF"/>
@@ -135,6 +134,7 @@
                 <ItemsPanelTemplate>
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
@@ -144,7 +144,10 @@
             <StatusBarItem BorderThickness="1,1,0,1">
                 <TextBlock x:Name="txtFileListStatus" TextAlignment="Left"/>
             </StatusBarItem>
-            <StatusBarItem Grid.Column="1" BorderThickness="0,1,1,1">
+            <StatusBarItem Grid.Column="1" BorderThickness="0,1,0,1">
+                <TextBlock x:Name="txtFilePathStatus" TextAlignment="Left" TextTrimming="CharacterEllipsis"/>
+            </StatusBarItem>
+            <StatusBarItem Grid.Column="2" BorderThickness="0,1,1,1">
                 <TextBlock x:Name="txtResultLineStatus" TextAlignment="Right"/>
             </StatusBarItem>
         </StatusBar>

@@ -489,6 +489,7 @@ namespace rg_gui
                     }
 
                     txtResultLineStatus.Text = $"符合 {ResultLineItems.Count} 行。";
+                    txtFilePathStatus.Text = System.IO.Path.Join(addedItem.Path, addedItem.Filename); // opqlo [狀態列路徑]-顯示選取檔案完整路徑
                 }
             }
         }
@@ -575,6 +576,7 @@ namespace rg_gui
             ResultLineItems.Reset(Enumerable.Empty<ResultLine>());
             txtFileListStatus.Text = string.Empty;
             txtResultLineStatus.Text = string.Empty;
+            txtFilePathStatus.Text = string.Empty; // opqlo [狀態列路徑]-搜尋開始時清除路徑
 
             m_ripGrepWrapper.Clear();
 
